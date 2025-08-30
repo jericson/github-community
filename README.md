@@ -21,6 +21,10 @@ having max(date) between date('now','start of month','-1 month')
 order by max(date);
 ```
 
+```
+sqlite3 community.db '.headers on' '.mode markdown' 'select project, sum(nCode) lines from t group by project order by project'
+```
+
 
 ## See also
 
