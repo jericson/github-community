@@ -42,7 +42,7 @@ mailmap = Hash.new
 @user = ARGV.shift
 @repo = ARGV.shift
 
-@uri = URI('https://api.github.com/repos/openssl/openssl/commits')
+@uri = URI("https://api.github.com/repos/#{@user}/#{@repo}/commits")
 
 @more = true
 @page = 1
@@ -94,6 +94,8 @@ while @more
   STDERR.puts @response.headers['link']
   @more = /rel="next"/.match?@response.headers['link']
   @page += 1
+
+  @more = false if @page > options[:query_limit]
 end
 
 puts mailmap.keys

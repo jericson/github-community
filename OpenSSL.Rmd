@@ -1,0 +1,158 @@
+---
+title: "GitHub communities"
+author: "Jon Ericson"
+date: "`r Sys.Date()`"
+font-import: https://fonts.googleapis.com/css?family=Source+Serif+4
+font-family: 'Source Serif 4'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#https://stackoverflow.com/questions/32545777/r-connection-to-sqlite
+library(tidyverse)
+library(DBI)
+library(see)
+
+
+con <- DBI::dbConnect(RSQLite::SQLite(), "community.db")
+
+library(ggthemes)
+
+knitr::opts_chunk$set(
+  fig.asp=1/(2*golden_ratio())
+)
+
+theme_slides <- function(){ 
+  font <- "Source Serif 4"
+  theme_tufte() %+replace%    #replace elements we want to change
+    
+    theme(
+      aspect.ratio=1/(2*golden_ratio()),
+      #legend.position="bottom",
+      legend.title = element_blank()
+    )
+}
+
+```
+Test words
+```{r}
+code_lines <- con |>
+  dbGetQuery("select project, date(creation_date) date , sum(nCode) lines, parent, type from t join tags using (project) group by project, creation_date, parent, type order by creation_date") 
+
+ggplot(code_lines, aes(as.Date(date), lines, color=type, group=type)) +
+  labs(
+    x = "release date",
+    y = "lines",
+    colors = '',
+    title = "Lines of code, tests and documentation by OpenSSL release date (log scale)"
+  ) +
+  geom_line() +
+  #geom_label(check_overlap = TRUE) +
+  scale_y_log10() +
+  scale_x_date(date_breaks = "4 year", 
+               date_labels = "%Y", 
+               limits= as.Date(ISOdate(c(1998, 2026),1,1))) + 
+  theme_slides() +
+  
+  scale_colour_manual(values = c("#1a3845", "#59873d", "#db6ba1", "#d9ba40"))
+```
+
+```{r}
+code_ratio <- con |>
+  dbGetQuery("select project, date(creation_date) date , 1.0*sum(nCode)/ (select sum(nCode) from t where project = parent) ratio, type from t join tags using (project) where parent is not null group by project, creation_date order by creation_date") 
+
+ggplot(code_ratio, aes(as.Date(date), ratio, color=type, group=type)) + 
+  labs(
+    x = "release date",
+    y = "ratio of lines per line of code",
+    colors = '',
+    title = "Ratio of tests and documentation to code by OpenSSL release"
+  ) +
+  geom_line() + 
+  #geom_label(check_overlap = TRUE) + 
+  scale_x_date(date_breaks = "4 year", 
+               date_labels = "%Y", 
+               limits= as.Date(ISOdate(c(1998, 2026),1,1))) + 
+  theme_slides() +
+  
+  scale_colour_manual(values = c(#"#1a3845", 
+    "#59873d", "#db6ba1", "#d9ba40"))
+```
+
+```{r}
+code_files <- con |>
+  dbGetQuery("select project, date(creation_date) date , count(*) files, type from t join tags using (project) group by project, creation_date order by creation_date") 
+
+ggplot(code_files, aes(as.Date(date), files, color=type, group=type)) + 
+  labs(
+    x = "release date",
+    y = "files",
+    colors = '',
+    title = "Code, documentation and testing files by OpenSSL release"
+  ) +
+  geom_line() + 
+  #geom_label(check_overlap = TRUE) + 
+  scale_x_date(date_breaks = "4 year", 
+               date_labels = "%Y", 
+               limits= as.Date(ISOdate(c(1998, 2026),1,1))) + 
+  theme_slides() +
+  
+  scale_colour_manual(values = c("#1a3845", "#59873d", "#db6ba1", "#d9ba40"))
+```
+
+```{r, fig.asp=1/(2*golden_ratio())}
+authors <- con |>
+  dbGetQuery("select count(author) author_count, commits, month
+             from (
+               select author, count(*) commits, strftime('%Y-%m-1', date) month 
+               from authors
+               group by author, strftime('%Y-%m-1', date)
+               having count(*) > 0)
+             where month < strftime('%Y-%m-1', 'now')
+             group by month") 
+
+ggplot(authors, aes(as.Date(month), author_count)) + 
+  labs(
+    x = "month",
+    y = "authors",
+    colors = '',
+    title = "OpenSSL commit authors by month"
+  ) +
+  geom_point(color="#1a3845") + 
+  #geom_label(check_overlap = TRUE) + 
+  scale_x_date(date_breaks = "4 year", 
+               date_labels = "%Y", 
+               limits= as.Date(ISOdate(c(1998, 2026),1,1))) +
+  geom_smooth(color="#59873d") + 
+  theme_slides() +
+  
+  scale_colour_manual(values = c("#1a3845", "#59873d", "#db6ba1", "#d9ba40"))
+```
+
+
+```{r, fig.asp=1/(2*golden_ratio())}
+issues <- con |>
+  dbGetQuery("select count(*) issue_count, strftime('%Y-%m-1', created_at) month
+             from issues
+             where month < strftime('%Y-%m-1', 'now')
+             group by strftime('%Y-%m-1', created_at)") 
+
+ggplot(issues, aes(as.Date(month), issue_count)) + 
+  labs(
+    x = "month",
+    y = "authors",
+    colors = '',
+    title = "OpenSSL commit authors by month"
+  ) +
+  geom_point(color="#1a3845") + 
+  #geom_label(check_overlap = TRUE) + 
+  scale_x_date(date_breaks = "4 year", 
+               date_labels = "%Y", 
+               limits= as.Date(ISOdate(c(2011, 2026),1,1))) +
+  geom_smooth(color="#59873d") + 
+  theme_slides() +
+  
+  scale_colour_manual(values = c("#1a3845", "#59873d", "#db6ba1", "#d9ba40"))
+```
