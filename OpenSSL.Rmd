@@ -5,6 +5,7 @@ date: "`r Sys.Date()`"
 font-import: https://fonts.googleapis.com/css?family=Source+Serif+4
 font-family: 'Source Serif 4'
 output: html_document
+#self_contained: no
 ---
 
 ```{r setup, include=FALSE}
@@ -134,25 +135,27 @@ ggplot(authors, aes(as.Date(month), author_count)) +
 
 ```{r, fig.asp=1/(2*golden_ratio())}
 issues <- con |>
-  dbGetQuery("select count(*) issue_count, strftime('%Y-%m-1', created_at) month
+  dbGetQuery("select count(*) issue_count, 
+                     strftime('%Y-%m-1', created_at) month,
+                     type
              from issues
              where month < strftime('%Y-%m-1', 'now')
-             group by strftime('%Y-%m-1', created_at)") 
+             group by strftime('%Y-%m-1', created_at), type") 
 
-ggplot(issues, aes(as.Date(month), issue_count)) + 
+ggplot(issues, aes(as.Date(month), issue_count, color=type)) +
   labs(
     x = "month",
-    y = "authors",
+    y = "count",
     colors = '',
-    title = "OpenSSL commit authors by month"
+    title = "OpenSSL Library issues, pull requests and discussions"
   ) +
-  geom_point(color="#1a3845") + 
-  #geom_label(check_overlap = TRUE) + 
+  geom_point() +
+  #geom_label(check_overlap = TRUE) +
   scale_x_date(date_breaks = "4 year", 
                date_labels = "%Y", 
-               limits= as.Date(ISOdate(c(2011, 2026),1,1))) +
-  geom_smooth(color="#59873d") + 
+               limits= as.Date(ISOdate(c(2013, 2026),1,1))) + 
   theme_slides() +
   
-  scale_colour_manual(values = c("#1a3845", "#59873d", "#db6ba1", "#d9ba40"))
+  scale_colour_manual(values = c("#1a3845", "#59873d", "#db6ba1", "#d9ba40")) +
+  geom_smooth()
 ```
